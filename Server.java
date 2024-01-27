@@ -47,6 +47,10 @@ public class Server {
                     String clientGuess = in.readLine();
 
                     String feedback = checkGuess(code, clientGuess);
+                    //INSERISCI LA LOGICA CHE SE I COLORI CHE INSERISCE IL CLIENT è GIUSTO MA NON NELLA POSIZIONE FAI IUN MESSAGGIO CON IL NUMERO  DEI PIORLINI NERI E BIANCHI A SECONDO SE IL CLIENT HA INSERITO  COLORE GIUSTO E POSIZIONE GIUSTA O COLORE GIUSTO E POSIZIONE SBAGLIATA
+                    
+
+
 
                     out.println(feedback);
 
