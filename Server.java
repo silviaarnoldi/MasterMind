@@ -23,8 +23,8 @@ public class Server {
 
     private static class MastermindGame implements Runnable {
         private Socket clientSocket;
-        private PrintWriter out;
-        private BufferedReader in;
+        private DataInputStream in;
+        private DataOutputStream out;
 
         public MastermindGame(Socket socket) {
             this.clientSocket = socket;
@@ -33,44 +33,44 @@ public class Server {
         @Override
         public void run() {
             try {
-                out = new PrintWriter(clientSocket.getOutputStream(), true);
-                in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                out = new DataOutputStream(clientSocket.getOutputStream());
+                in = new DataInputStream(clientSocket.getInputStream());
 
+                //genera codice segreto prendendo i colori di riferimento COLORS = {"GIALLO", "VERDE", "BLU", "VIOLA", "ROSSO", "ARANCIONE", "AZZURRO"};
                 String[] code = generateCode();
+                System.out.println("Codice segreto: " + Arrays.toString(code));
 
-                out.println("Benvenuto a Mastermind! Indovina la sequenza di colori.");
+                out.writeUTF("Benvenuto a Mastermind! Indovina la sequenza di colori.\n");
+                out.flush();
 
-                int attempts = 0;
-                while (attempts < 10) {
-                    attempts++;
-
-                    String clientGuess = in.readLine();
+                String clientGuess;
+                while (true) {
+                    clientGuess = in.readUTF();
 
                     String feedback = checkGuess(code, clientGuess);
-                    //INSERISCI LA LOGICA CHE SE I COLORI CHE INSERISCE IL CLIENT è GIUSTO MA NON NELLA POSIZIONE FAI IUN MESSAGGIO CON IL NUMERO  DEI PIORLINI NERI E BIANCHI A SECONDO SE IL CLIENT HA INSERITO  COLORE GIUSTO E POSIZIONE GIUSTA O COLORE GIUSTO E POSIZIONE SBAGLIATA
-                    
+                    System.out.println("Feedback: " + feedback);
 
+                    out.writeUTF(feedback + "\n");
+                    out.flush();
 
-
-                    out.println(feedback);
-
-                    if (feedback.equals("4 pirolini neri")) {
-                        out.println("Congratulazioni! Hai indovinato la sequenza. Il gioco termina.");
+                    if (feedback.equals("4 pirolini neri, 0 pirolini bianchi")) {
                         break;
                     }
-                }
-
-                if (attempts == 10) {
-                    out.println("Hai esaurito i tentativi. La sequenza corretta era: " + Arrays.toString(code));
                 }
 
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
                 try {
-                    out.close();
-                    in.close();
-                    clientSocket.close();
+                    if (in != null) {
+                        in.close();
+                    }
+                    if (out != null) {
+                        out.close();
+                    }
+                    if (clientSocket != null) {
+                        clientSocket.close();
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -78,27 +78,53 @@ public class Server {
         }
 
         private String[] generateCode() {
-            Random random = new Random();
+            //generare un codice senza ripetizioni
             String[] code = new String[4];
+            Random random = new Random();
             for (int i = 0; i < 4; i++) {
                 code[i] = COLORS[random.nextInt(COLORS.length)];
+                for (int j = 0; j < i; j++) {
+                    if (code[i].equals(code[j])) {
+                        i--;
+                        break;
+                    }
+                }
             }
             return code;
         }
 
+        private String colorecheck(String[] code, String colore) {
+            for (int i = 0; i < 4; i++) {
+                if (code[i].equals(colore)) {
+                    return "true";
+                }
+            }
+            return "false";
+        }
         private String checkGuess(String[] code, String guess) {
             int blackPegs = 0; 
             int whitePegs = 0; 
-
+            String c;
+            //STAMPA IL CODICE INSERITO DAL CLIENT
+            System.out.println("Codice inserito dal client: " +guess);
+            //TRASFORMA LA STRINGA GUESS IN ARRAY
+            String[] guessArray = guess.split(" ");
+            guessArray=guess.split(", ");
+            //STAMPA L'ARRAY GUESS
+            System.out.println("Array guess: " + Arrays.toString(guessArray));
             for (int i = 0; i < 4; i++) {
-                if (guess.equals(code[i])) {
+                if (guessArray[i].equals(code[i])) {
                     blackPegs++;
-                } else if (Arrays.asList(code).contains(guess)) {
-                    whitePegs++;
+                } else {
+                    c=colorecheck(code, guessArray[i]);
+                    if( c.equals("true") ){
+                        whitePegs++;
+                    }
+                   
                 }
             }
-
-            return blackPegs + " pirolini neri, " + whitePegs + " pirolini bianchi";
+            
+            return blackPegs + " pirolini neri, " + whitePegs + " pirolini bianchi\n";
         }
     }
 }
